@@ -177,6 +177,7 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
 
         const double limits_param = IK_PARAM_bot.find("limits_param").asFloat64();
         double improve_manip_dyn = IK_PARAM_bot.find("improve_manip_dyn").asFloat64();
+        improve_manip_dyn_ = improve_manip_dyn;
         double improve_manip_th = IK_PARAM_bot.find("improve_manip_th").asFloat64();
 
         Eigen::VectorXd joint_acc_weight;
@@ -862,7 +863,7 @@ void Module::log()
         yInfo() << "joints qp vel" << eigenToString(qp_joints_vel);
         yInfo() << "joints qp pos" << eigenToString(qp_joints_pos);
         yInfo() << "manip "<<qp_manip<<" max_manip "<<qp_max_manip<<" manip/max_manip "<<qp_manip/qp_max_manip<<" weight_manip_function "<<qp_weight_manip_function;
-
+        yInfo() << "Manip dyn" << improve_manip_dyn_;
         //measured values
         yInfo() << "---------- Current values, errors w.r.t. QP generated -----------";
         yInfo() << "pos cur" << eigenToString(meas_pos);

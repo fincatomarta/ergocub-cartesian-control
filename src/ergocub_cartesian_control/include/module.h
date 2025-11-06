@@ -147,6 +147,7 @@ private:
     /* Reachability */
     double pos_err_th_;
     int max_iter_;
+    double improve_manip_dyn_;
 
     /* RPC command port */
     yarp::os::Port rpc_cmd_port_;

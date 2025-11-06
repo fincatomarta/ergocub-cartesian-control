@@ -84,7 +84,7 @@ yarp::sig::Matrix Module::get_pose()
 
 bool Module::go_home()
 {
-    serviceTrajInit(false, home_pose_, min_traj_duration_);
+    serviceTrajInit(false, home_pose_, 10.0);
 
     return true;
 }

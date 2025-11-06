@@ -7,6 +7,7 @@
 #include <DifferentialInverseKinematicsQP.h>
 
 #include <yarp/os/LogStream.h>
+#include <yarp/os/Log.h>
 
 using namespace proxsuite::proxqp;
 
@@ -139,10 +140,10 @@ std::optional<Eigen::VectorXd> DifferentialInverseKinematicsQP::eval_reference_v
     }
 
     // /* Introduce joint accelerations term into cost function. */
-    // if (joint_acc_weight_(0) > 0.0)
-    // {
-    //     P += Eigen::MatrixXd::Identity(P.rows(), P.cols()) * joint_acc_weight_(0) * weight_manip_function_;
-    // }
+    if (joint_acc_weight_(0) > 0.0)
+    {
+        P += Eigen::MatrixXd::Identity(P.rows(), P.cols()) * joint_acc_weight_(0)* weight_manip_function_;
+    }
 
     /* Introduce joint position control term into cost function. */
     if (joint_pos_param_(0) > 0.0)
@@ -166,10 +167,45 @@ std::optional<Eigen::VectorXd> DifferentialInverseKinematicsQP::eval_reference_v
         // Increment torso roll PD gains in order to prefer other joints motion.
         for (int i = 0; i < torso_joints_to_stiffen_ && i < joints_.size(); i++)
         {
-            JP_1(i,i) *= 5;
-            JP_2(i,i) *= 5;
+            JP_1(i,i) *= 20;
+            JP_2(i,i) *= 20;
+        }
+        for (int i = torso_joints_to_stiffen_+1; i < torso_joints_to_stiffen_ + 3; i++)
+        {
+            JP_1(i,i) *= 20;
+            //JP_2(i,i) *= 20;
+        }
+        // // 144 6.25 100 100 4 4 4 4
+        // JP_1(0,0)=144;
+        // JP_1(1,1)=6.25;
+        // JP_1(2,2)=100;
+        // JP_1(3,3)=100;
+        // JP_1(4,4)=4;
+        // JP_1(5,5)=4;
+        // JP_1(6,6)=4;
+        // JP_1(7,7)=4;
+
+        // // 168 3.5 14 14 2.8 2.8 2.8 2.8
+        // JP_2(0,0)=168;
+        // JP_2(1,1)=3.5;
+        // JP_2(2,2)=14;
+        // JP_2(3,3)=14;
+        // JP_2(4,4)=2.8;
+        // JP_2(5,5)=2.8;
+        // JP_2(6,6)=2.8;
+        // JP_2(7,7)=2.8;
+        
+
+        for (int i=0; i < joints_.size(); i++)
+        {
+            for (int j=0; j < joints_.size(); j++)
+            {
+                yDebug() << "DDKQP: JP_1(" << i << "," << j << ") = " << JP_1(i,j);
+                yDebug() << "DDKQP: JP_2(" << i << "," << j << ") = " << JP_2(i,j);
+            }
         }
         
+        // massa molla smorzatore
         ddq_ref = des_joints_acc + JP_1 * (joint_ref_ - joints_) + JP_2 * (des_joints_vel - joints_vel_);
 
         ddq_ref *= - 2.0 * joint_pos_param_(0);
@@ -395,15 +431,11 @@ std::tuple<Eigen::MatrixXd, Eigen::VectorXd> DifferentialInverseKinematicsQP::li
     yDebugThrottle(2) << "Manipolability gain: " << improve_manip_dyn_ ;
     yDebugThrottle(2) << "Manipolability gain: " << improve_manip_th_;
     
-    if (manip <= improve_manip_th_)
-    {
-        std::cout << "\n\n\nmanip <= improve_manip_th_ "<< manip << " <= " << improve_manip_th_ <<"\n\n\n";
-        improve_manip_dyn_= 0.0;
-    }
-
     G_l.block(2 * joints.size(), 0, 1, joints.size()) = -sampling_time_ * dmdq.transpose();
-    h_l(2 * joints.size()) = improve_manip_dyn_* (manip - improve_manip_th_) + dmdq.dot(joints_vel_);
-
+    if (manip < improve_manip_th_)
+        h_l(2 * joints.size()) = dmdq.dot(joints_vel_);
+    else
+        h_l(2 * joints.size()) = improve_manip_dyn_* (manip - improve_manip_th_) + dmdq.dot(joints_vel_);
 
     return std::make_tuple(G_l, h_l);
 }
