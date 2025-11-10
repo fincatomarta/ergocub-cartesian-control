@@ -609,13 +609,13 @@ bool Module::updateModule()
         log();
 
     if (encoders_pos_.has_value() && no_control_)
-+    {
-+        yarp::sig::Vector& out = joints_pos_port_.prepare();
-+        out.resize(encoders_pos_->size());
-+        for (size_t i = 0; i < out.size(); ++i)
-+            out[i] = (*encoders_pos_)(i);
-+        joints_pos_port_.write();
-+    }
+    {
+        yarp::sig::Vector& out = joints_pos_port_.prepare();
+        out.resize(encoders_pos_->size());
+        for (size_t i = 0; i < out.size(); ++i)
+            out[i] = (*encoders_pos_)(i);
+        joints_pos_port_.write();
+    }
 
     return true;
 }
