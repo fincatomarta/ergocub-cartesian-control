@@ -91,10 +91,7 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
         return false;
     }
     no_control_ = COMMON_bot.check("no_control") ? COMMON_bot.find("no_control").asBool() : false;
-    if (no_control_)
-    {
-        joints_pos_port_.open(("/" + module_name_ + "/joints_pos:o").c_str());
-    }
+    
     yDebug() << module_name_ + "::configure(). no_control set to " << std::boolalpha << no_control_ << ".";
     
     //-------------------------------------------
@@ -124,7 +121,11 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
     yarp::os::Bottle ARM_bot;
     if (!groupCheckAndRetrieve(rf, "ARM", ARM_bot))
         return false;
-
+    const std::string joint_local_port = ARM_bot.find("joint_local_port").asString();
+    if (no_control_)
+    {
+        joints_pos_port_.open(( joint_local_port + "/joints_pos:o").c_str());
+    }
     
 
     yarp::os::Bottle IK_PARAM_bot;
@@ -610,10 +611,16 @@ bool Module::updateModule()
 
     if (encoders_pos_.has_value() && no_control_)
     {
+        // Publish the desired joint trajectory (reference positions computed by the integrator)
+        // instead of the measured encoder values. This mirrors the bimanual module behavior.
+        const Eigen::VectorXd& ref_pos = vel2pos_integrator_->get_state();
+
         yarp::sig::Vector& out = joints_pos_port_.prepare();
-        out.resize(encoders_pos_->size());
-        for (size_t i = 0; i < out.size(); ++i)
-            out[i] = (*encoders_pos_)(i);
+        out.resize(static_cast<int>(ref_pos.size()));
+        for (size_t i = 0; i < static_cast<size_t>(ref_pos.size()); ++i)
+        {
+            out[static_cast<int>(i)] = ref_pos[static_cast<int>(i)];
+        }
         joints_pos_port_.write();
     }
 
