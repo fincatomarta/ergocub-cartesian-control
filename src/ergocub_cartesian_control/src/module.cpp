@@ -608,14 +608,14 @@ bool Module::updateModule()
     if (module_logging_ || module_verbose_)
         log();
 
-    if (no_control_)
-    {
-        yarp::sig::Vector& out = joints_pos_port_.prepare();
-        out.resize(compound_chain_.joints.pos.size());
-        for (size_t i = 0; i < out.size(); ++i)
-            out[i] = compound_chain_.joints.pos[i];
-        joints_pos_port_.write();
-    }
+    if (encoders_pos_.has_value() && no_control_)
++    {
++        yarp::sig::Vector& out = joints_pos_port_.prepare();
++        out.resize(encoders_pos_->size());
++        for (size_t i = 0; i < out.size(); ++i)
++            out[i] = (*encoders_pos_)(i);
++        joints_pos_port_.write();
++    }
 
     return true;
 }
