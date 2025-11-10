@@ -80,6 +80,8 @@ private:
     Eigen::Transform<double, 3, Eigen::Affine> current_transform_;
     Eigen::Vector3d desired_lin_vel_;
     Eigen::Vector3d desired_ang_vel_;
+    yarp::os::BufferedPort<yarp::sig::Vector> joints_pos_port_;
+    bool no_control_{false};
 
     void setCurrPose(const Eigen::Transform<double, 3, Eigen::Affine> &curr_pose);
     Eigen::Transform<double, 3, Eigen::Affine> getCurrPose();

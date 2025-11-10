@@ -90,6 +90,12 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
         yError() << module_name_ + "::configure(). Error: mandatory parameter 'max_iteration' should be greater than 0.";
         return false;
     }
+    no_control_ = COMMON_bot.check("no_control") ? COMMON_bot.find("no_control").asBool() : false;
+    if (no_control_)
+    {
+        joints_pos_port_.open(("/" + module_name_ + "/joints_pos:o").c_str());
+    }
+    yDebug() << module_name_ + "::configure(). no_control set to " << std::boolalpha << no_control_ << ".";
     
     //-------------------------------------------
     //  Log configuration parameters
@@ -384,6 +390,7 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
 bool Module::close()
 {
     rpc_cmd_port_.close();
+    joints_pos_port_.close();
 
     return true;
 }
@@ -396,6 +403,7 @@ double Module::getPeriod()
 bool Module::interruptModule()
 {
     rpc_cmd_port_.interrupt();
+    joints_pos_port_.interrupt();
 
     return true;
 }
@@ -510,14 +518,17 @@ bool Module::updateModule()
                 return false;
             }
         }
-
-        if (!cub_joint_control_.moveToStreaming(future_ref))
+        if (!no_control_)
         {
-            yError() << module_name_ + "::updateModule(). Error: Cannot set desired joint position reference. See the errors above.";
-            error_prev_state_ = State::Running;
-            setState(State::Error);
-            return false;
+            if (!cub_joint_control_.moveToStreaming(future_ref))
+            {
+                yError() << module_name_ + "::updateModule(). Error: Cannot set desired joint position reference. See the errors above.";
+                error_prev_state_ = State::Running;
+                setState(State::Error);
+                return false;
+            }
         }
+        
 
         if(getDuration() == 0.0 || (traj_.lin_gen->isEnd() && traj_.ang_gen->isEnd())){
             bool is_ended = true;
@@ -596,6 +607,15 @@ bool Module::updateModule()
 
     if (module_logging_ || module_verbose_)
         log();
+
+    if (no_control_)
+    {
+        yarp::sig::Vector& out = joints_pos_port_.prepare();
+        out.resize(compound_chain_.joints.pos.size());
+        for (size_t i = 0; i < out.size(); ++i)
+            out[i] = compound_chain_.joints.pos[i];
+        joints_pos_port_.write();
+    }
 
     return true;
 }
