@@ -281,7 +281,9 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
             appendOrInit(cartesian_pos_weight, s(RIGHT_ARM_bot.find("cartesian_pos_weight").asFloat64()));
             appendOrInit(cartesian_pos_p_gain, s(RIGHT_ARM_bot.find("cartesian_pos_p_gain").asFloat64()));
             appendOrInit(cartesian_pos_d_gain, s(RIGHT_ARM_bot.find("cartesian_pos_d_gain").asFloat64()));
-
+            yInfo() << "RIGHT_ARM cartesian_pos_weight: " << cartesian_pos_weight.transpose();
+            yInfo() << "RIGHT_ARM cartesian_pos_p_gain: " << cartesian_pos_p_gain.transpose();
+            yInfo() << "RIGHT_ARM cartesian_pos_d_gain: " << cartesian_pos_d_gain.transpose();
             appendOrInit(cartesian_ori_weight, s(RIGHT_ARM_bot.find("cartesian_ori_weight").asFloat64()));
             appendOrInit(cartesian_ori_p_gain, s(RIGHT_ARM_bot.find("cartesian_ori_p_gain").asFloat64()));
             appendOrInit(cartesian_ori_d_gain, s(RIGHT_ARM_bot.find("cartesian_ori_d_gain").asFloat64()));
@@ -302,7 +304,9 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
             appendOrInit(cartesian_pos_weight, s(LEFT_ARM_bot.find("cartesian_pos_weight").asFloat64()));
             appendOrInit(cartesian_pos_p_gain, s(LEFT_ARM_bot.find("cartesian_pos_p_gain").asFloat64()));
             appendOrInit(cartesian_pos_d_gain, s(LEFT_ARM_bot.find("cartesian_pos_d_gain").asFloat64()));
-
+            yInfo() << "LEFT_ARM cartesian_pos_weight: " << cartesian_pos_weight.transpose();
+            yInfo() << "LEFT_ARM cartesian_pos_p_gain: " << cartesian_pos_p_gain.transpose();
+            yInfo() << "LEFT_ARM cartesian_pos_d_gain: " << cartesian_pos_d_gain.transpose();
             appendOrInit(cartesian_ori_weight, s(LEFT_ARM_bot.find("cartesian_ori_weight").asFloat64()));
             appendOrInit(cartesian_ori_p_gain, s(LEFT_ARM_bot.find("cartesian_ori_p_gain").asFloat64()));
             appendOrInit(cartesian_ori_d_gain, s(LEFT_ARM_bot.find("cartesian_ori_d_gain").asFloat64()));

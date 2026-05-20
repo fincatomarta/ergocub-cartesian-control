@@ -49,7 +49,7 @@ private:
     yarp::dev::IControlMode* mode_;
 
     /* List of joint names. */
-    const std::vector<std::string> joints_list_ = {"torso_roll", "torso_pitch", "torso_yaw", "neck_pitch", "neck_roll", "neck_yaw"};    //, "camera_tilt"
+    const std::vector<std::string> joints_list_ = {"torso_roll_eq_joint", "torso_pitch_eq_joint", "torso_yaw_joint", "neck_pitch_joint", "neck_yaw_joint"};    //, "camera_tilt"
 
     /* List of the actuated joints indexes and names. */
     std::vector<std::string> actuated_joints_list_;
