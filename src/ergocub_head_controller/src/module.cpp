@@ -53,7 +53,7 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     }
 
     /* Configure forward kinematics. */
-    if (!fk_.configure(robot_urdf_path, robot_.getJointsList(), robot_.getActuatedJointsList(), "root_link", "head"))
+    if (!fk_.configure(robot_urdf_path, robot_.getJointsList(), robot_.getActuatedJointsList(), "base_link", "head_link"))
     {
         yError() << module_name_ + "::configure. Error: cannot configure the forward kinematics.";
         return false;
