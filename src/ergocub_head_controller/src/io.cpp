@@ -25,10 +25,11 @@ IO::~IO()
 }
 
 
-bool IO::configure(const std::string& robot, const std::vector<std::string>& actuated_joints_list, const std::string& local_port_name)
+bool IO::configure(const std::string& robot, const std::vector<std::string>& actuated_joints_list, const Eigen::VectorXd& actuated_joints_signs, const std::string& local_port_name)
 {
     /* Store the list of actuated joints names. */
     actuated_joints_list_ = actuated_joints_list;
+    actuated_joints_signs_ = actuated_joints_signs;
 
     /* Setup the list of actuated and non actuated joints indexes. */
     for (std::size_t i = 0; i < joints_list_.size(); i++)
@@ -203,7 +204,7 @@ std::optional<std::unordered_map<std::string, Eigen::VectorXd>> IO::getEncodersA
     encoders_map["actuated"] = Eigen::VectorXd(getNumberActuatedJoints());
     for (std::size_t i = 0; i < getNumberActuatedJoints(); i++)
     {
-        encoders_map["actuated"][i] = encoders[actuated_joints_indexes_[i]];
+        encoders_map["actuated"][i] = actuated_joints_signs_[i] * encoders[actuated_joints_indexes_[i]];
     }
 
     return encoders_map;
@@ -235,8 +236,17 @@ std::optional<IO::Limits> IO::getLimitsActuatedJoints()
     Eigen::VectorXd limits_max_actuated(getNumberActuatedJoints());
     for (std::size_t i = 0; i < getNumberActuatedJoints(); i++)
     {
-        limits_min_actuated[i] = limits_min[actuated_joints_indexes_[i]];
-        limits_max_actuated[i] = limits_max[actuated_joints_indexes_[i]];
+        const int joint_index = actuated_joints_indexes_[i];
+        if (actuated_joints_signs_[i] > 0.0)
+        {
+            limits_min_actuated[i] = limits_min[joint_index];
+            limits_max_actuated[i] = limits_max[joint_index];
+        }
+        else
+        {
+            limits_min_actuated[i] = -limits_max[joint_index];
+            limits_max_actuated[i] = -limits_min[joint_index];
+        }
     }
 
     return Limits{.lower = limits_min_actuated, .upper = limits_max_actuated};
@@ -291,7 +301,8 @@ bool IO::moveActuatedJoints(const Eigen::VectorXd& joints)
     }
 
 
-    Eigen::VectorXd joints_deg = joints * 180.0 / M_PI;
+    const Eigen::VectorXd joints_hw = actuated_joints_signs_.array() * joints.array();
+    Eigen::VectorXd joints_deg = joints_hw * 180.0 / M_PI;
 
     return control_->setPositions(getNumberActuatedJoints(), actuated_joints_indexes_.data(), joints_deg.data());
 }

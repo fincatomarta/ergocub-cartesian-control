@@ -23,7 +23,7 @@ public:
 
     ~IO();
 
-    bool configure(const std::string& robot, const std::vector<std::string>& actuated_joints_list, const std::string& local_port_name);
+    bool configure(const std::string& robot, const std::vector<std::string>& actuated_joints_list, const Eigen::VectorXd& actuated_joints_signs, const std::string& local_port_name);
 
     std::size_t getNumberActuatedJoints();
 
@@ -54,6 +54,7 @@ private:
     /* List of the actuated joints indexes and names. */
     std::vector<std::string> actuated_joints_list_;
     std::vector<int> actuated_joints_indexes_;
+    Eigen::VectorXd actuated_joints_signs_;
 
     /* List of the non actuated joints indexes and names. */
     std::vector<int> non_actuated_joints_indexes_;
