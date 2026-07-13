@@ -10,11 +10,43 @@
 
 #include <yarp/os/LogStream.h>
 
+namespace
+{
+std::vector<yarp::dev::SelectableControlModeEnum> toSelectableControlModes(const std::vector<int>& modes)
+{
+    std::vector<yarp::dev::SelectableControlModeEnum> yarpModes;
+    yarpModes.reserve(modes.size());
+    for (const int mode : modes)
+    {
+        yarpModes.push_back(static_cast<yarp::dev::SelectableControlModeEnum>(mode));
+    }
+    return yarpModes;
+}
+
+bool getControlModes(yarp::dev::IControlMode* mode,
+                     const std::vector<int>& joints,
+                     std::vector<int>& modes)
+{
+    std::vector<yarp::dev::ControlModeEnum> yarpModes(modes.size());
+    const bool ok = mode->getControlModes(joints, yarpModes);
+    if (!ok)
+    {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < yarpModes.size(); ++i)
+    {
+        modes[i] = static_cast<int>(yarpModes[i]);
+    }
+    return true;
+}
+} // namespace
+
 
 IO::~IO()
 {
     /* Restore control mode of actuated joints. */
-    if ((mode_ != nullptr) && (!mode_->setControlModes(getNumberActuatedJoints(), actuated_joints_indexes_.data(), actuated_joints_original_mode_.data())))
+    if ((mode_ != nullptr) && (!mode_->setControlModes(actuated_joints_indexes_, toSelectableControlModes(actuated_joints_original_mode_))))
     {
         yError() << class_name_ + "::configure. Cannot restore the control mode of the actuated joints using IControlMode::setControlModes().";
     }
@@ -91,11 +123,11 @@ bool IO::configure(const std::string& robot, const std::vector<std::string>& act
 
     /* Backup control mode of actuated joints. */
     actuated_joints_original_mode_.resize(getNumberActuatedJoints());
-    bool success;
+    bool success = false;
     int max_attempt = 10;
     for (int attempts = 1; attempts <= max_attempt; attempts++)
     {
-        success = mode_->getControlModes(getNumberActuatedJoints(), actuated_joints_indexes_.data(), actuated_joints_original_mode_.data());
+        success = getControlModes(mode_, actuated_joints_indexes_, actuated_joints_original_mode_);
         if (success)
             break;
         yarp::os::Time::delay(0.1);
@@ -108,11 +140,25 @@ bool IO::configure(const std::string& robot, const std::vector<std::string>& act
 
     /* Set actuated joints in Position Direct mode. */
     std::vector<int> modes(getNumberActuatedJoints(), VOCAB_CM_POSITION_DIRECT);
-    if (!mode_->setControlModes(getNumberActuatedJoints(), actuated_joints_indexes_.data(), modes.data()))
+
+    if (!mode_->setControlMode(actuated_joints_indexes_[0], VOCAB_CM_POSITION_DIRECT))
     {
-        yError() << class_name_ + "::configure. Cannot set the control mode of the actuated joints using IControlMode::setControlModes().";
+        yError() << class_name_ + "::moveActuatedJoints************. Error: cannot set the control mode of joint " << actuated_joints_indexes_[0] << " using IControlMode::setControlMode().";
         return false;
     }
+    if (!mode_->setControlMode(actuated_joints_indexes_[1], VOCAB_CM_POSITION_DIRECT))
+    {
+        yError() << class_name_ + "::moveActuatedJoints************. Error: cannot set the control mode of joint " << actuated_joints_indexes_[1] << " using IControlMode::setControlMode().";
+        return false;
+    }
+
+    
+    
+    // if (!mode_->setControlModes(actuated_joints_indexes_, toSelectableControlModes(modes)))
+    // {
+    //     yError() << class_name_ + "::configure. Cannot set the control mode of the actuated joints using IControlMode::setControlModes().";
+    //     return false;
+    // }
 
 
     return true;
@@ -223,9 +269,9 @@ std::optional<IO::Limits> IO::getLimitsActuatedJoints()
     Eigen::VectorXd limits_max(getNumberAllJoints());
     for (std::size_t i = 0; i < getNumberAllJoints(); i++)
     {
-        if (!limits_->getLimits(i, &limits_min[i], &limits_max[i]))
+        if (!limits_->getPosLimits(i, &limits_min[i], &limits_max[i]))
         {
-            yError() << class_name_ + "::getLimitsActuatedJoints(). Error: the IControlLimits::getLimits() method cannot be called.";
+            yError() << class_name_ + "::getLimitsActuatedJoints(). Error: the IControlLimits::getPosLimits() method cannot be called.";
             return {};
         }
     }
@@ -263,7 +309,7 @@ bool IO::moveActuatedJoints(const Eigen::VectorXd& joints)
 
     /* Get control modes to check if there are joints in fault, idle or not in the desired control mode. */
     std::vector<int> current_modes(getNumberActuatedJoints());
-    if (!mode_->getControlModes(getNumberActuatedJoints(), actuated_joints_indexes_.data(), current_modes.data()))
+    if (!getControlModes(mode_, actuated_joints_indexes_, current_modes))
     {
         yError() << class_name_ + "::moveActuatedJoints. Error: cannot get the current joints control modes of the actuated joints using IControlMode::getControlModes().";
         return false;
@@ -293,11 +339,23 @@ bool IO::moveActuatedJoints(const Eigen::VectorXd& joints)
     {
         /* Set all joints again for simplicity. */
         std::vector<int> modes(getNumberActuatedJoints(), VOCAB_CM_POSITION_DIRECT);
-        if (!mode_->setControlModes(getNumberActuatedJoints(), actuated_joints_indexes_.data(), modes.data()))
+
+        if (!mode_->setControlMode(actuated_joints_indexes_[0], VOCAB_CM_POSITION_DIRECT))
         {
-            yError() << class_name_ + "::moveActuatedJoints. Cannot set the control mode of the actuated joints using IControlMode::setControlModes().";
+            yError() << class_name_ + "::moveActuatedJoints************. Error: cannot set the control mode of joint " << actuated_joints_indexes_[0] << " using IControlMode::setControlMode().";
             return false;
         }
+        if (!mode_->setControlMode(actuated_joints_indexes_[1], VOCAB_CM_POSITION_DIRECT))
+        {
+            yError() << class_name_ + "::moveActuatedJoints************. Error: cannot set the control mode of joint " << actuated_joints_indexes_[1] << " using IControlMode::setControlMode().";
+            return false;
+        }
+
+        // if (!mode_->setControlModes(actuated_joints_indexes_, toSelectableControlModes(modes)))
+        // {
+        //     yError() << class_name_ + "::moveActuatedJoints. Cannot set the control mode of the actuated joints using IControlMode::setControlModes().";
+        //     return false;
+        // }
     }
 
 

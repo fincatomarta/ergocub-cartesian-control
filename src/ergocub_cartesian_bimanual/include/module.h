@@ -9,7 +9,12 @@
 #include <yarp/os/Bottle.h>
 #include <yarp/os/BufferedPort.h>
 
+#if __has_include(<BipedalLocomotion/YarpUtilities/VectorsCollectionServer.h>)
+#define ERGOCUB_HAS_BLF_LOGGER 1
 #include <BipedalLocomotion/YarpUtilities/VectorsCollectionServer.h>
+#else
+#define ERGOCUB_HAS_BLF_LOGGER 0
+#endif
 
 #include <memory>
 #include <string.h>
@@ -130,7 +135,9 @@ private:
 
     /* Logging */
     void verboseAndLog();
+#if ERGOCUB_HAS_BLF_LOGGER
     BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /** Logger server. */
+#endif
 
     /* HELPER function*/
     void appendEigen(Eigen::VectorXd &vec, const Eigen::VectorXd &vec_app);

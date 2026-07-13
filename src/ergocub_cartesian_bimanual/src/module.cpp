@@ -9,7 +9,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#if ERGOCUB_HAS_BLF_LOGGER
 #include <BipedalLocomotion/ParametersHandler/YarpImplementation.h>
+#endif
 
 #include <utils/utils.h>
 #include <utils/utils.hpp>
@@ -17,11 +19,40 @@
 #include <optional>
 
 #include <chrono>
+#include <cstdlib>
+#include <filesystem>
+#include <sstream>
 #include <thread>
 
 #include <unsupported/Eigen/MatrixFunctions>
 
 using namespace std::literals::chrono_literals;
+
+namespace
+{
+std::string findRobotUrdfFromEnvironment()
+{
+    const char* robotName = std::getenv("YARP_ROBOT_NAME");
+    const char* yarpDataDirs = std::getenv("YARP_DATA_DIRS");
+    if (robotName == nullptr || yarpDataDirs == nullptr)
+    {
+        return {};
+    }
+
+    std::stringstream dirs(yarpDataDirs);
+    std::string dir;
+    while (std::getline(dirs, dir, ':'))
+    {
+        const std::filesystem::path candidate = std::filesystem::path(dir) / "robots" / robotName / "model.urdf";
+        if (std::filesystem::exists(candidate))
+        {
+            return candidate.string();
+        }
+    }
+
+    return {};
+}
+} // namespace
 
 bool Module::configure(yarp::os::ResourceFinder &rf)
 {
@@ -56,6 +87,13 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
     sample_time_ = 1.0 / COMMON_bot.find("rate").asFloat64();
     module_logging_ = COMMON_bot.find("module_logging").asBool();
     module_verbose_ = COMMON_bot.find("module_verbose").asBool();
+#if !ERGOCUB_HAS_BLF_LOGGER
+    if (module_logging_)
+    {
+        yWarning() << "[" + module_name_ + "::configure] BLF logger headers were not found; disabling module_logging.";
+        module_logging_ = false;
+    }
+#endif
     const bool qp_verbose = COMMON_bot.find("qp_verbose").asBool();
     const std::string rpc_local_port_name = COMMON_bot.find("rpc_local_port_name").asString();
     bp_cmd_port_.open(COMMON_bot.find("ctrl_local_port_name").asString());
@@ -184,7 +222,11 @@ bool Module::configure(yarp::os::ResourceFinder &rf)
     /* Instantiate and initialize iDynTree-based forward kinematics. */
     {
         /* Get robot urdf path. */
-        const std::string robot_urdf_path = rf.findFileByName("model.urdf");
+        std::string robot_urdf_path = rf.findFileByName("model.urdf");
+        if (robot_urdf_path.empty())
+        {
+            robot_urdf_path = findRobotUrdfFromEnvironment();
+        }
         if (robot_urdf_path.empty())
         {
             yError() << "[" + module_name_ + "::configure] Error: cannot load the robot urdf path. Please chack that the YARP_ROBOT_NAME environment variable is set.";
