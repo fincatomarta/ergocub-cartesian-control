@@ -50,6 +50,11 @@ std::string findRobotUrdfFromEnvironment()
 }
 } // namespace
 
+Module::Module(const std::string& module_name)
+    : module_name_(module_name)
+{
+}
+
 bool Module::configure(yarp::os::ResourceFinder &rf)
 {
     /* Check for and retrieve mandatory groups. */
